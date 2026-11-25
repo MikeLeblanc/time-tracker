@@ -15,5 +15,6 @@ Automatic: publish new files to the hosting site and the app picks them up the n
 
 ## Data
 
-Time entries are stored on the computer where the app is installed. Use **Save backup file** regularly,
-and **Export to Excel (CSV)** for billing.
+Time entries are stored on the computer where the app is installed. Click **Turn on automatic backup**
+and pick a file in your OneDrive folder; the app then keeps that file up to date. To move to a new
+computer, use **Restore from backup** with that file. Use **Export to Excel (CSV)** for billing.

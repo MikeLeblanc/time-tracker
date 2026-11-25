@@ -52,7 +52,15 @@
 
     <section class="card">
       <h2>Backup</h2>
-      <p class="muted">Your data is stored on this computer only. Make a backup now and then.</p>
+      <div id="autoBackup">
+        <p id="autoStatus" class="muted"></p>
+        <div class="row">
+          <button id="autoChoose">Turn on automatic backup</button>
+          <button id="autoResume" hidden>Resume automatic backup</button>
+          <button id="autoOff" class="secondary" hidden>Turn off</button>
+        </div>
+      </div>
+      <p class="muted">Or save a copy by hand:</p>
       <div class="row">
         <button id="backup" class="secondary">Save backup file</button>
         <button id="restoreBtn" class="secondary">Restore from backup</button>

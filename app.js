@@ -18,6 +18,7 @@ function load() {
 
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  scheduleAutoBackup();
 }
 
 const newId = () => crypto.randomUUID();
@@ -271,6 +272,94 @@ $('restore').addEventListener('change', async () => {
     alert('That file is not a Time Tracker backup.');
   }
 });
+
+// --- Automatic backup ---------------------------------------------------
+// Keeps a chosen file (e.g. in OneDrive) in sync with the data. The file handle lives in IndexedDB.
+const LAST_BACKUP_KEY = 'timetracker.lastAutoBackup';
+let backupFile = null;
+let backupTimer = null;
+let backupError = '';
+
+function handleStore(mode, fn) {
+  return new Promise((resolve, reject) => {
+    const open = indexedDB.open('timetracker', 1);
+    open.onupgradeneeded = () => open.result.createObjectStore('handles');
+    open.onerror = () => reject(open.error);
+    open.onsuccess = () => {
+      const req = fn(open.result.transaction('handles', mode).objectStore('handles'));
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    };
+  });
+}
+const getStoredHandle = () => handleStore('readonly', (s) => s.get('backup'));
+const setStoredHandle = (h) => handleStore('readwrite', (s) => (h ? s.put(h, 'backup') : s.delete('backup')));
+
+function scheduleAutoBackup() {
+  if (!backupFile) return;
+  clearTimeout(backupTimer);
+  backupTimer = setTimeout(writeAutoBackup, 2000);
+}
+
+async function writeAutoBackup() {
+  if (!backupFile || (await backupFile.queryPermission({ mode: 'readwrite' })) !== 'granted') return renderAutoBackup();
+  try {
+    const w = await backupFile.createWritable();
+    await w.write(JSON.stringify(data, null, 2));
+    await w.close();
+    localStorage.setItem(LAST_BACKUP_KEY, Date.now());
+    backupError = '';
+  } catch {
+    backupError = 'Could not save the backup file. Choose it again with "Turn on automatic backup".';
+  }
+  renderAutoBackup();
+}
+
+async function renderAutoBackup() {
+  if (!('showSaveFilePicker' in window)) {
+    $('autoStatus').textContent = 'Automatic backup needs Chrome or Edge.';
+    $('autoChoose').hidden = true;
+    return;
+  }
+  const permission = backupFile ? await backupFile.queryPermission({ mode: 'readwrite' }) : null;
+  const last = Number(localStorage.getItem(LAST_BACKUP_KEY));
+  $('autoChoose').hidden = !!backupFile && !backupError;
+  $('autoResume').hidden = !backupFile || permission === 'granted';
+  $('autoOff').hidden = !backupFile;
+  $('autoStatus').className = backupError || (backupFile && permission !== 'granted') ? 'error' : 'muted';
+  $('autoStatus').textContent = !backupFile
+    ? 'Automatic backup is off. Turn it on and pick a file in your OneDrive folder.'
+    : backupError
+      || (permission !== 'granted'
+        ? `Automatic backup to ${backupFile.name} is paused. Click "Resume automatic backup".`
+        : `Automatic backup is on: ${backupFile.name}${last ? ` (last saved ${fmtDateTime(last)})` : ''}.`);
+}
+
+$('autoChoose').addEventListener('click', async () => {
+  try {
+    backupFile = await showSaveFilePicker({
+      suggestedName: 'time-tracker-backup.json',
+      startIn: 'documents',
+      types: [{ description: 'Time Tracker backup', accept: { 'application/json': ['.json'] } }],
+    });
+  } catch { return; } // picker cancelled
+  await setStoredHandle(backupFile);
+  writeAutoBackup();
+});
+
+$('autoResume').addEventListener('click', async () => {
+  if ((await backupFile.requestPermission({ mode: 'readwrite' })) === 'granted') writeAutoBackup();
+  else renderAutoBackup();
+});
+
+$('autoOff').addEventListener('click', async () => {
+  backupFile = null;
+  backupError = '';
+  await setStoredHandle(null);
+  renderAutoBackup();
+});
+
+getStoredHandle().then((h) => { backupFile = h ?? null; }, () => {}).finally(renderAutoBackup);
 
 // --- Render -------------------------------------------------------------
 function render() {
