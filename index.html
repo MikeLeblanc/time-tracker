@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Time Tracker</title>
+  <meta name="theme-color" content="#1f6f5c">
+  <meta name="color-scheme" content="light">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Time Tracker</h1>
+      <button id="installBtn" class="link" hidden>Install app</button>
+    </header>
+
+    <section class="card timer">
+      <label for="project">Project</label>
+      <div class="row">
+        <select id="project"></select>
+        <button id="manageBtn" class="secondary" title="Add or remove projects">Projects…</button>
+      </div>
+      <div id="elapsed" class="elapsed">0:00:00</div>
+      <button id="goStop" class="go">GO</button>
+      <p id="status" class="muted"></p>
+    </section>
+
+    <section class="card">
+      <div class="row spread">
+        <h2>Entries</h2>
+        <div class="row">
+          <input type="date" id="from" aria-label="From">
+          <span class="muted">to</span>
+          <input type="date" id="to" aria-label="To">
+        </div>
+      </div>
+      <div id="totals"></div>
+      <table>
+        <thead><tr><th>Project</th><th>Start</th><th>End</th><th>Hours</th><th></th></tr></thead>
+        <tbody id="entries"></tbody>
+      </table>
+      <p id="noEntries" class="muted" hidden>No entries in this period.</p>
+      <div class="row">
+        <button id="addEntry" class="secondary">Add entry manually</button>
+        <button id="exportCsv" class="secondary">Export to Excel (CSV)</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Backup</h2>
+      <p class="muted">Your data is stored on this computer only. Make a backup now and then.</p>
+      <div class="row">
+        <button id="backup" class="secondary">Save backup file</button>
+        <button id="restoreBtn" class="secondary">Restore from backup</button>
+        <input type="file" id="restore" accept=".json" hidden>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="projectsDialog">
+    <h2>Projects</h2>
+    <form id="addProjectForm" class="row">
+      <input id="newProject" placeholder="New project name" required>
+      <button type="submit">Add</button>
+    </form>
+    <ul id="projectList"></ul>
+    <div class="row end"><button id="closeProjects" class="secondary">Done</button></div>
+  </dialog>
+
+  <dialog id="entryDialog">
+    <h2 id="entryTitle">Edit entry</h2>
+    <form id="entryForm">
+      <label>Project <select id="entryProject"></select></label>
+      <label>Start <input type="datetime-local" id="entryStart" required></label>
+      <label>End <input type="datetime-local" id="entryEnd" required></label>
+      <p id="entryError" class="error" hidden></p>
+      <div class="row end">
+        <button type="button" id="cancelEntry" class="secondary">Cancel</button>
+        <button type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
