@@ -33,7 +33,12 @@ function formatDuration(ms) {
   return `${Math.floor(s / 3600)}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
 }
 
-const hours = (ms) => (ms / 3600000).toFixed(2);
+// Durations are whole minutes between the shown start and end times, so End − Start always matches.
+const minutes = (e) => Math.floor(e.end / 60000) - Math.floor(e.start / 60000);
+function fmtMinutes(m) {
+  const h = Math.floor(m / 60);
+  return h ? `${h} h ${pad(m % 60)} min` : `${m} min`;
+}
 const fmtDateTime = (t) => new Date(t).toLocaleString(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 const fmtTime = (t) => new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 const fmtDate = (t) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
@@ -188,10 +193,10 @@ function renderEntries() {
   body.replaceChildren();
   const totals = new Map();
   for (const e of entries) {
-    totals.set(e.projectId, (totals.get(e.projectId) ?? 0) + (e.end - e.start));
+    totals.set(e.projectId, (totals.get(e.projectId) ?? 0) + minutes(e));
     const tr = document.createElement('tr');
     const sameDay = fmtDate(e.start) === fmtDate(e.end);
-    for (const [text, cls] of [[projectName(e.projectId)], [fmtDateTime(e.start)], [sameDay ? fmtTime(e.end) : fmtDateTime(e.end)], [hours(e.end - e.start), 'num']]) {
+    for (const [text, cls] of [[projectName(e.projectId)], [fmtDateTime(e.start)], [sameDay ? fmtTime(e.end) : fmtDateTime(e.end)], [fmtMinutes(minutes(e)), 'num']]) {
       const td = document.createElement('td');
       td.textContent = text;
       if (cls) td.className = cls;
@@ -214,17 +219,17 @@ function renderEntries() {
   const t = $('totals');
   t.replaceChildren();
   let all = 0;
-  for (const [pid, ms] of [...totals].sort((a, b) => projectName(a[0]).localeCompare(projectName(b[0])))) {
-    all += ms;
+  for (const [pid, m] of [...totals].sort((a, b) => projectName(a[0]).localeCompare(projectName(b[0])))) {
+    all += m;
     const span = document.createElement('span');
     span.className = 'pill';
-    span.textContent = `${projectName(pid)}: ${hours(ms)} h`;
+    span.textContent = `${projectName(pid)}: ${fmtMinutes(m)}`;
     t.append(span);
   }
   if (totals.size > 1) {
     const span = document.createElement('span');
     span.className = 'pill';
-    span.innerHTML = `<strong>Total: ${hours(all)} h</strong>`;
+    span.innerHTML = `<strong>Total: ${fmtMinutes(all)}</strong>`;
     t.append(span);
   }
 }
@@ -244,9 +249,9 @@ function download(filename, content, type) {
 const csvCell = (v) => `"${String(v).replace(/"/g, '""')}"`;
 
 $('exportCsv').addEventListener('click', () => {
-  const rows = [['Project', 'Date', 'Start', 'End', 'Hours']];
+  const rows = [['Project', 'Date', 'Start', 'End', 'Minutes', 'Time']];
   for (const e of inRange().reverse()) {
-    rows.push([projectName(e.projectId), fmtDate(e.start), toLocalInput(e.start).slice(11), toLocalInput(e.end).slice(11), hours(e.end - e.start)]);
+    rows.push([projectName(e.projectId), fmtDate(e.start), toLocalInput(e.start).slice(11), toLocalInput(e.end).slice(11), minutes(e), fmtMinutes(minutes(e))]);
   }
   // The BOM makes Excel read accented characters correctly.
   download(`time-${$('from').value || 'all'}-to-${$('to').value || 'all'}.csv`, '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n'), 'text/csv');
